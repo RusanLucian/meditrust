@@ -1,8 +1,6 @@
 <?php
 require_once '../bootstrap.php';
 
-requireLogin('login.php');
-
 // Fetch all doctors with their specialties
 $query = "
     SELECT 
@@ -49,6 +47,8 @@ if (!empty($_GET['specialty'])) {
         return (int)($d['specialty_id'] ?? 0) === $specialty_filter;
     });
 }
+
+$is_logged_in = isset($_SESSION['user_id']);
 ?>
 
 <!DOCTYPE html>
@@ -61,16 +61,28 @@ if (!empty($_GET['specialty'])) {
 </head>
 <body>
     <?php
-    $headerGreeting = '👋 Bine ai venit, ' . ($_SESSION['user_name'] ?? '') . '!';
-    $headerLinks = [
-        ['href' => '../auth/dashboard.php', 'label' => 'Dashboard'],
-        ['href' => '../auth/logout.php', 'label' => '🔓 Delogare'],
-    ];
+    if ($is_logged_in) {
+        $headerGreeting = '👋 Bine ai venit, ' . ($_SESSION['user_name'] ?? '') . '!';
+        $headerLinks = [
+            ['href' => '../auth/dashboard.php', 'label' => 'Dashboard'],
+            ['href' => '../auth/logout.php', 'label' => '🔓 Delogare'],
+        ];
+    } else {
+        $headerGreeting = null;
+        $headerLinks = [
+            ['href' => '../auth/login.php', 'label' => '🔓 Conectare'],
+            ['href' => '../auth/register.php', 'label' => '📝 Înregistrare'],
+        ];
+    }
     require_once '../includes/header.php';
     ?>
 
     <div class="container">
-        <a href="../auth/dashboard.php" class="back-btn">← Înapoi la Dashboard</a>
+        <?php if ($is_logged_in): ?>
+            <a href="../auth/dashboard.php" class="back-btn">← Înapoi la Dashboard</a>
+        <?php else: ?>
+            <a href="../index.php" class="back-btn">← Înapoi la pagina principală</a>
+        <?php endif; ?>
 
         <h1>🏥 Lista Medici</h1>
 

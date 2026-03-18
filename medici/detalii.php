@@ -1,8 +1,6 @@
 <?php
 require_once '../bootstrap.php';
 
-requireLogin('login.php');
-
 $doctor_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if ($doctor_id <= 0) {
@@ -63,6 +61,9 @@ if (!empty($reviews)) {
     $total_rating = array_sum(array_column($reviews, 'rating'));
     $avg_rating = round($total_rating / count($reviews), 1);
 }
+
+$is_logged_in = isset($_SESSION['user_id']);
+$is_patient = (($_SESSION['user_type'] ?? '') === 'patient');
 ?>
 
 <!DOCTYPE html>
@@ -75,15 +76,25 @@ if (!empty($reviews)) {
 </head>
 <body>
     <?php
-    $headerGreeting = '👋 Bine ai venit, ' . ($_SESSION['user_name'] ?? '') . '!';
-    $headerLinks = [
-        ['href' => '../auth/dashboard.php', 'label' => 'Dashboard'],
-        ['href' => '../auth/logout.php', 'label' => '🔓 Delogare'],
-    ];
+    if ($is_logged_in) {
+        $headerGreeting = '👋 Bine ai venit, ' . ($_SESSION['user_name'] ?? '') . '!';
+        $headerLinks = [
+            ['href' => '../auth/dashboard.php', 'label' => 'Dashboard'],
+            ['href' => '../auth/logout.php', 'label' => '🔓 Delogare'],
+        ];
+    } else {
+        $headerGreeting = null;
+        $headerLinks = [
+            ['href' => '../auth/login.php', 'label' => '🔓 Conectare'],
+            ['href' => '../auth/register.php', 'label' => '📝 Înregistrare'],
+        ];
+    }
     require_once '../includes/header.php';
     ?>
 
     <div class="container">
+        <a href="lista.php" class="back-btn">← Înapoi la lista medicilor</a>
+
         <div class="doctor-detail-card">
             <div class="doctor-detail-header">
                 <div class="doctor-avatar">
@@ -118,7 +129,7 @@ if (!empty($reviews)) {
             <div class="actions-section">
                 <h3>Acțiuni</h3>
                 <div class="actions-grid">
-                    <?php if (($_SESSION['user_type'] ?? '') === 'patient'): ?>
+                    <?php if ($is_patient): ?>
                         <a href="../pacient/book.php?doctor_id=<?php echo (int)$doctor['id']; ?>" class="action-btn">
                             <span class="icon">📅</span>
                             <span>Programează-te</span>
@@ -127,6 +138,11 @@ if (!empty($reviews)) {
                         <a href="../reviews/add.php?doctor_id=<?php echo (int)$doctor['id']; ?>" class="action-btn">
                             <span class="icon">✍️</span>
                             <span>Lasă recenzie</span>
+                        </a>
+                    <?php elseif (!$is_logged_in): ?>
+                        <a href="../auth/login.php" class="action-btn">
+                            <span class="icon">🔓</span>
+                            <span>Conectează-te pentru programare</span>
                         </a>
                     <?php endif; ?>
 
