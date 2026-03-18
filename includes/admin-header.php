@@ -2,14 +2,21 @@
 /**
  * Admin Top Header - MediTrust Admin Panel
  * Include this file after the sidebar in every admin page.
- * $adminPageTitle  - Page title shown in topbar (string)
- * $adminBreadcrumb - Breadcrumb text (string, optional)
+ * 
+ * Required Variables:
+ * - $adminPageTitle: Page title shown in topbar (string)
+ * 
+ * Optional Variables:
+ * - $adminBreadcrumb: Breadcrumb text (string)
  */
-$adminPageTitle  = $adminPageTitle  ?? 'Admin Panel';
+
+$adminPageTitle = $adminPageTitle ?? 'Admin Panel';
 $adminBreadcrumb = $adminBreadcrumb ?? 'Admin &rsaquo; ' . htmlspecialchars($adminPageTitle);
-$adminUserName   = $_SESSION['user_name'] ?? 'Admin';
+$adminUserName = $_SESSION['user_name'] ?? 'Admin';
 $adminUserInitial = strtoupper(mb_substr($adminUserName, 0, 1));
+$adminLogoutUrl = BASE_URL . 'admin/logout.php';
 ?>
+
 <header class="admin-topbar">
     <div class="topbar-left">
         <h1><?php echo htmlspecialchars($adminPageTitle); ?></h1>
@@ -20,6 +27,6 @@ $adminUserInitial = strtoupper(mb_substr($adminUserName, 0, 1));
             <div class="admin-avatar"><?php echo htmlspecialchars($adminUserInitial); ?></div>
             <span><?php echo htmlspecialchars($adminUserName); ?></span>
         </div>
-        <a href="<?php echo BASE_URL; ?>admin/logout.php" class="btn btn-sm btn-danger">🔓 Ieșire</a>
+        <a href="<?php echo $adminLogoutUrl; ?>" class="btn btn-sm btn-danger">🔓 Ieșire</a>
     </div>
 </header>

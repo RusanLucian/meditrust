@@ -16,7 +16,7 @@ $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // CSRF check
-    if (!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
         $error = '❌ Cerere invalidă. Reîncarcă pagina și încearcă din nou.';
     } else {
         $email    = trim($_POST['email'] ?? '');
@@ -35,22 +35,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result->num_rows === 1) {
                 $user = $result->fetch_assoc();
                 if (password_verify($password, $user['password'])) {
-                    // Regenerate session ID on privilege escalation
                     session_regenerate_id(true);
 
-                    $_SESSION['user_id']   = $user['id'];
+                    $_SESSION['user_id'] = $user['id'];
                     $_SESSION['user_name'] = $user['name'];
                     $_SESSION['user_type'] = $user['user_type'];
                     $_SESSION['admin_logged_in_at'] = time();
 
-                    // Rotate CSRF token after login
                     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
                     header('Location: dashboard.php');
                     exit;
                 }
             }
-            // Generic error to avoid user enumeration
+
             $error = '❌ Email sau parolă incorectă!';
         }
     }

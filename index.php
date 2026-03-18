@@ -1,8 +1,12 @@
 <?php
-session_start();
+require_once 'bootstrap.php';
 
 if (isset($_SESSION['user_id'])) {
-    header("Location: auth/dashboard.php");
+    if (($_SESSION['user_type'] ?? '') === 'admin') {
+        header("Location: admin/dashboard.php");
+    } else {
+        header("Location: auth/dashboard.php");
+    }
     exit;
 }
 ?>

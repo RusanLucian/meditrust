@@ -28,13 +28,23 @@ $filterSearch = trim($_GET['search'] ?? '');
 $allowedStatuses = ['scheduled', 'confirmed', 'completed', 'cancelled', 'rejected', 'pending'];
 $filterStatus = in_array($filterStatus, $allowedStatuses, true) ? $filterStatus : '';
 
-$query  = "SELECT a.id, a.appointment_date, a.status, a.notes,
-                  p.name AS patient_name, p.email AS patient_email,
-                  d.name AS doctor_name, d.specialty
-           FROM appointments a
-           JOIN users p ON a.patient_id = p.id
-           JOIN users d ON a.doctor_id  = d.id
-           WHERE 1=1";
+$query  = "
+    SELECT 
+        a.id, 
+        a.appointment_date, 
+        a.status, 
+        a.notes,
+        p.name AS patient_name, 
+        p.email AS patient_email,
+        d.name AS doctor_name, 
+        s.name as specialty
+    FROM appointments a
+    JOIN users p ON a.patient_id = p.id
+    JOIN users d ON a.doctor_id  = d.id
+    LEFT JOIN info_doctori id ON d.id = id.user_id
+    LEFT JOIN specialties s ON id.specialty_id = s.id
+    WHERE 1=1
+";
 $params = [];
 $types  = '';
 

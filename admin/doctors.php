@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_doctor'])) {
     $del_id = (int)($_POST['doctor_id'] ?? 0);
 
     if ($del_id > 0) {
-        $stmt = $conn->prepare("DELETE FROM users WHERE id = ? AND user_type IN ('doctor','medic')");
+        $stmt = $conn->prepare("DELETE FROM users WHERE id = ? AND user_type = 'doctor'");
         $stmt->bind_param('i', $del_id);
         $message = $stmt->execute() && $stmt->affected_rows > 0
             ? '✅ Doctorul a fost șters cu succes!'
@@ -21,16 +21,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_doctor'])) {
 
 // ── Filters ──────────────────────────────────────────────────
 $filterSearch    = trim($_GET['search']    ?? '');
-$filterSpecialty = trim($_GET['specialty'] ?? '');
+$filterSpecialty = (int)($_GET['specialty'] ?? 0);
 
-$query  = "SELECT u.id, u.name, u.email, u.phone, u.specialty, u.user_type,
-                  COUNT(DISTINCT a.id) AS total_appointments,
-                  ROUND(AVG(r.rating), 1) AS avg_rating,
-                  COUNT(DISTINCT r.id) AS total_reviews
-           FROM users u
-           LEFT JOIN appointments a ON a.doctor_id = u.id
-           LEFT JOIN reviews r ON r.doctor_id = u.id
-           WHERE u.user_type IN ('doctor','medic')";
+$query  = "
+    SELECT 
+        u.id, 
+        u.name, 
+        u.email, 
+        u.phone, 
+        u.user_type,
+        s.id as specialty_id,
+        s.name as specialty,
+        id.bio,
+        id.avatar,
+        COUNT(DISTINCT a.id) AS total_appointments,
+        ROUND(AVG(r.rating), 1) AS avg_rating,
+        COUNT(DISTINCT r.id) AS total_reviews
+    FROM users u
+    LEFT JOIN info_doctori id ON u.id = id.user_id
+    LEFT JOIN specialties s ON id.specialty_id = s.id
+    LEFT JOIN appointments a ON a.doctor_id = u.id
+    LEFT JOIN reviews r ON r.doctor_id = u.id
+    WHERE u.user_type = 'doctor'
+";
 $params = [];
 $types  = '';
 
@@ -42,10 +55,10 @@ if ($filterSearch !== '') {
     $types   .= 'ss';
 }
 
-if ($filterSpecialty !== '') {
-    $query  .= " AND u.specialty = ?";
+if ($filterSpecialty > 0) {
+    $query  .= " AND s.id = ?";
     $params[] = $filterSpecialty;
-    $types   .= 's';
+    $types   .= 'i';
 }
 
 $query .= " GROUP BY u.id ORDER BY u.name ASC";
@@ -59,7 +72,7 @@ $doctors = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
 // Get all specialties for filter dropdown
 $specs = $conn->query(
-    "SELECT DISTINCT specialty FROM users WHERE user_type IN ('doctor','medic') AND specialty IS NOT NULL AND specialty != '' ORDER BY specialty"
+    "SELECT id, name FROM specialties ORDER BY name"
 )->fetch_all(MYSQLI_ASSOC);
 
 $adminActivePage = 'doctors';
@@ -97,9 +110,9 @@ $adminPageTitle  = 'Gestionare Doctori';
                         <select name="specialty">
                             <option value="">Toate specialitățile</option>
                             <?php foreach ($specs as $s): ?>
-                                <option value="<?php echo htmlspecialchars($s['specialty']); ?>"
-                                    <?php echo $filterSpecialty === $s['specialty'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($s['specialty']); ?>
+                                <option value="<?php echo $s['id']; ?>"
+                                    <?php echo $filterSpecialty === $s['id'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($s['name']); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>

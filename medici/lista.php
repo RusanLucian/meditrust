@@ -1,59 +1,54 @@
 <?php
 require_once '../bootstrap.php';
 
-requireLogin('../auth/login.php');
+requireLogin('login.php');
 
-$search = $_GET['search'] ?? '';
-$specialty = $_GET['specialty'] ?? '';
+// Fetch all doctors with their specialties
+$query = "
+    SELECT 
+        u.id, 
+        u.name, 
+        u.email, 
+        u.phone,
+        s.name AS specialty,
+        s.id AS specialty_id,
+        info.bio,
+        info.avatar
+    FROM users u
+    LEFT JOIN info_doctori info ON u.id = info.user_id
+    LEFT JOIN specialties s ON info.specialty_id = s.id
+    WHERE u.user_type = 'doctor'
+    ORDER BY s.name, u.name
+";
 
-$query = "SELECT * FROM users WHERE user_type = 'doctor'";
-$params = [];
-$types = '';
-
-if (!empty($search)) {
-    $query .= " AND name LIKE ?";
-    $params[] = "%$search%";
-    $types .= 's';
+$doctors = [];
+$result = $conn->query($query);
+if ($result) {
+    $doctors = $result->fetch_all(MYSQLI_ASSOC);
 }
 
-if (!empty($specialty)) {
-    $query .= " AND specialty = ?";
-    $params[] = $specialty;
-    $types .= 's';
-}
-
-$stmt = $conn->prepare($query);
-if (!empty($params)) {
-    $stmt->bind_param($types, ...$params);
-}
-$stmt->execute();
-$doctors = $stmt->get_result();
-
-$specialties_result = $conn->query("SELECT DISTINCT specialty FROM users WHERE user_type = 'doctor' AND specialty IS NOT NULL");
+// Get unique specialties for filter
 $specialties = [];
-while ($row = $specialties_result->fetch_assoc()) {
-    if (!empty($row['specialty'])) {
-        $specialties[] = $row['specialty'];
-    }
+$specialty_query = "
+    SELECT DISTINCT s.id, s.name
+    FROM specialties s
+    INNER JOIN info_doctori info ON s.id = info.specialty_id
+    WHERE info.user_id IN (SELECT id FROM users WHERE user_type = 'doctor')
+    ORDER BY s.name
+";
+
+$specialty_result = $conn->query($specialty_query);
+if ($specialty_result) {
+    $specialties = $specialty_result->fetch_all(MYSQLI_ASSOC);
 }
 
-// Funcție pentru calculare rating
-function getDoctorRating($doctor_id, $conn) {
-    $rating_stmt = $conn->prepare("
-        SELECT AVG(rating) as avg_rating, COUNT(*) as total_reviews 
-        FROM reviews 
-        WHERE doctor_id = ?
-    ");
-    $rating_stmt->bind_param("i", $doctor_id);
-    $rating_stmt->execute();
-    $result = $rating_stmt->get_result()->fetch_assoc();
-    
-    return [
-        'avg_rating' => round($result['avg_rating'] ?? 0, 1),
-        'total_reviews' => $result['total_reviews'] ?? 0
-    ];
+$filtered_doctors = $doctors;
+if (!empty($_GET['specialty'])) {
+    $specialty_filter = (int)$_GET['specialty'];
+    $filtered_doctors = array_filter($doctors, function ($d) use ($specialty_filter) {
+        return (int)($d['specialty_id'] ?? 0) === $specialty_filter;
+    });
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -61,12 +56,12 @@ function getDoctorRating($doctor_id, $conn) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medici - MediTrust</title>
+    <title>Lista Medici - MediTrust</title>
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
     <?php
-    $headerGreeting = '👋 Bine ai venit, ' . ($_SESSION['user_name'] ?? 'User') . '!';
+    $headerGreeting = '👋 Bine ai venit, ' . ($_SESSION['user_name'] ?? '') . '!';
     $headerLinks = [
         ['href' => '../auth/dashboard.php', 'label' => 'Dashboard'],
         ['href' => '../auth/logout.php', 'label' => '🔓 Delogare'],
@@ -77,67 +72,71 @@ function getDoctorRating($doctor_id, $conn) {
     <div class="container">
         <a href="../auth/dashboard.php" class="back-btn">← Înapoi la Dashboard</a>
 
+        <h1>🏥 Lista Medici</h1>
+
         <div class="filters">
-            <h2>🔍 Caută Medici</h2>
-            <form method="GET">
+            <h2>Filtrare</h2>
+            <form method="GET" class="filter-form">
                 <div class="filter-group">
-                    <input type="text" name="search" placeholder="Caută după nume..." value="<?php echo htmlspecialchars($search); ?>" autocomplete="off">
-                    <select name="specialty">
-                        <option value="">Toate Specialitățile</option>
+                    <select id="specialty" name="specialty" onchange="this.form.submit()">
+                        <option value="">-- Toate specialitățile --</option>
                         <?php foreach ($specialties as $spec): ?>
-                            <option value="<?php echo htmlspecialchars($spec); ?>" <?php echo $specialty === $spec ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($spec); ?>
+                            <option value="<?php echo (int)$spec['id']; ?>"
+                                <?php echo (string)($_GET['specialty'] ?? '') === (string)$spec['id'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($spec['name']); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-
-                <div class="filter-buttons">
-                    <button type="submit">🔍 Caută</button>
-                    <a href="lista.php" class="reset-btn">↻ Resetează</a>
-                </div>
             </form>
         </div>
 
-        <?php if ($doctors && $doctors->num_rows > 0): ?>
-            <div class="doctors-grid">
-                <?php while ($doctor = $doctors->fetch_assoc()): ?>
-                    <?php 
-                        $rating_data = getDoctorRating($doctor['id'], $conn);
-                        $avg_rating = $rating_data['avg_rating'];
-                        $total_reviews = $rating_data['total_reviews'];
-                        $stars = displayStars($avg_rating);
+        <div class="doctors-grid">
+            <?php if (empty($filtered_doctors)): ?>
+                <div class="no-data">
+                    <div class="no-data-icon">👨‍⚕️</div>
+                    <p>Nu am găsit medici cu această specialitate.</p>
+                </div>
+            <?php else: ?>
+                <?php foreach ($filtered_doctors as $doctor): ?>
+                    <?php
+                    $bio_preview = trim($doctor['bio'] ?? '');
+                    $bio_text = $bio_preview !== ''
+                        ? mb_strimwidth($bio_preview, 0, 100, '...')
+                        : 'Fără descriere disponibilă.';
                     ?>
                     <div class="doctor-card">
                         <div class="doctor-header">
-                            <h3>👨‍⚕️ <?php echo htmlspecialchars($doctor['name']); ?></h3>
-                            <p><?php echo htmlspecialchars($doctor['specialty'] ?? 'Medic'); ?></p>
+                            <h3><?php echo htmlspecialchars($doctor['name']); ?></h3>
+                            <p><?php echo htmlspecialchars($doctor['specialty'] ?? 'Specialitate indisponibilă'); ?></p>
                         </div>
+
                         <div class="doctor-body">
                             <div class="doctor-info">
-                                <strong>📧 Email:</strong>
-                                <span><?php echo htmlspecialchars($doctor['email']); ?></span>
+                                <strong>📞 Telefon</strong>
+                                <?php echo htmlspecialchars($doctor['phone'] ?? 'N/A'); ?>
                             </div>
+
                             <div class="doctor-info">
-                                <strong>📱 Telefon:</strong>
-                                <span><?php echo htmlspecialchars($doctor['phone'] ?? 'N/A'); ?></span>
+                                <strong>📧 Email</strong>
+                                <?php echo htmlspecialchars($doctor['email']); ?>
                             </div>
-                            <div class="rating">
-                                <span class="stars"><?php echo $stars; ?></span>
-                                <span class="review-count"><?php echo $avg_rating; ?>/5 (<?php echo $total_reviews; ?> <?php echo $total_reviews === 1 ? 'review' : 'review-uri'; ?>)</span>
-                            </div>
-                            <div class="doctor-footer">
-                                <a href="detalii.php?id=<?php echo $doctor['id']; ?>" class="btn-view">👁️ Vezi Detalii</a>
+
+                            <div class="doctor-info">
+                                <strong>ℹ️ Descriere</strong>
+                                <?php echo htmlspecialchars($bio_text); ?>
                             </div>
                         </div>
+
+                        <div class="doctor-footer">
+                            <a href="detalii.php?id=<?php echo (int)$doctor['id']; ?>" class="btn-view">
+                                Vezi Detalii
+                            </a>
+                        </div>
                     </div>
-                <?php endwhile; ?>
-            </div>
-        <?php else: ?>
-            <div class="no-doctors">
-                <p>❌ Nu s-au găsit medici matching pe criteriile tale.</p>
-            </div>
-        <?php endif; ?>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
     </div>
 </body>
 </html>

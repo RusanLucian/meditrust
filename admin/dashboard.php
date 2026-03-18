@@ -3,26 +3,32 @@ require_once '../bootstrap.php';
 require_once 'auth-check.php';
 
 // ── Statistics ──────────────────────────────────────────────
-$totalUsers        = $conn->query("SELECT COUNT(*) AS c FROM users")->fetch_assoc()['c'];
-$totalDoctors      = $conn->query("SELECT COUNT(*) AS c FROM users WHERE user_type IN ('doctor','medic')")->fetch_assoc()['c'];
-$totalPatients     = $conn->query("SELECT COUNT(*) AS c FROM users WHERE user_type IN ('patient','pacient')")->fetch_assoc()['c'];
-$totalAppointments = $conn->query("SELECT COUNT(*) AS c FROM appointments")->fetch_assoc()['c'];
+$totalUsers          = $conn->query("SELECT COUNT(*) AS c FROM users")->fetch_assoc()['c'];
+$totalDoctors        = $conn->query("SELECT COUNT(*) AS c FROM users WHERE user_type = 'doctor'")->fetch_assoc()['c'];
+$totalPatients       = $conn->query("SELECT COUNT(*) AS c FROM users WHERE user_type = 'patient'")->fetch_assoc()['c'];
+$totalAppointments   = $conn->query("SELECT COUNT(*) AS c FROM appointments")->fetch_assoc()['c'];
 $pendingAppointments = $conn->query("SELECT COUNT(*) AS c FROM appointments WHERE status IN ('scheduled','pending')")->fetch_assoc()['c'];
-$totalReviews      = $conn->query("SELECT COUNT(*) AS c FROM reviews")->fetch_assoc()['c'];
+$totalReviews        = $conn->query("SELECT COUNT(*) AS c FROM reviews")->fetch_assoc()['c'];
 
 // ── Recent appointments ──────────────────────────────────────
 $recentApps = $conn->query("
-    SELECT a.id, a.appointment_date, a.status,
-           p.name AS patient_name,
-           d.name AS doctor_name, d.specialty
+    SELECT 
+        a.id, 
+        a.appointment_date, 
+        a.status,
+        p.name AS patient_name,
+        d.name AS doctor_name, 
+        s.name as specialty
     FROM appointments a
-    JOIN users p ON a.patient_id  = p.id
-    JOIN users d ON a.doctor_id   = d.id
+    JOIN users p ON a.patient_id = p.id
+    JOIN users d ON a.doctor_id = d.id
+    LEFT JOIN info_doctori info ON d.id = info.user_id
+    LEFT JOIN specialties s ON info.specialty_id = s.id
     ORDER BY a.id DESC
     LIMIT 8
 ")->fetch_all(MYSQLI_ASSOC);
 
-// ── Recently registered users ────────────────────────────────
+// ── Recently registered users ──────────────────────────────
 $recentUsers = $conn->query("
     SELECT id, name, email, user_type
     FROM users

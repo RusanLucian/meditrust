@@ -104,24 +104,36 @@ function initTableSearch(inputId, tableId) {
     input.addEventListener('input', function () {
         const filter = this.value.toLowerCase();
         const rows = table.querySelectorAll('tbody tr');
+
         rows.forEach(function (row) {
             const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(filter) ? '' : 'none';
+            const isVisible = text.includes(filter);
+            row.style.display = isVisible ? '' : 'none';
         });
     });
 }
 
 // ============================================================
 // Specialty field toggle (show/hide for doctor users)
+// Works only if page contains #specialtyGroup
 // ============================================================
 document.addEventListener('DOMContentLoaded', function () {
     const userTypeSelect = document.getElementById('user_type');
     const specialtyGroup = document.getElementById('specialtyGroup');
+    const specialtySelect = document.getElementById('specialty_id');
+
     if (userTypeSelect && specialtyGroup) {
         function toggleSpecialty() {
             const val = userTypeSelect.value;
-            specialtyGroup.style.display = (val === 'doctor' || val === 'medic') ? '' : 'none';
+            const isDoctor = (val === 'doctor');
+
+            specialtyGroup.style.display = isDoctor ? '' : 'none';
+
+            if (specialtySelect) {
+                specialtySelect.required = isDoctor;
+            }
         }
+
         userTypeSelect.addEventListener('change', toggleSpecialty);
         toggleSpecialty();
     }
@@ -133,30 +145,100 @@ document.addEventListener('DOMContentLoaded', function () {
 function validateForm(formId) {
     const form = document.getElementById(formId);
     if (!form) return true;
-    const requiredFields = form.querySelectorAll('[required]');
-    let valid = true;
-    requiredFields.forEach(function (field) {
+
+    form.querySelectorAll('[required]').forEach(function (field) {
         field.style.borderColor = '';
-        if (!field.value.trim()) {
+    });
+
+    let valid = true;
+    const errors = [];
+
+    const requiredFields = form.querySelectorAll('[required]');
+    requiredFields.forEach(function (field) {
+        if (!field.value || (field.type === 'text' && !field.value.trim())) {
             field.style.borderColor = '#ff6363';
             valid = false;
+            errors.push('⚠️ ' + (field.placeholder || field.name) + ' este obligatoriu!');
         }
     });
 
-    // Email validation
     const emailField = form.querySelector('input[type="email"]');
-    if (emailField && emailField.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailField.value)) {
-        emailField.style.borderColor = '#ff6363';
-        valid = false;
+    if (emailField && emailField.value) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(emailField.value)) {
+            emailField.style.borderColor = '#ff6363';
+            valid = false;
+            errors.push('❌ Email invalid!');
+        }
     }
 
-    // Password match
     const pass = form.querySelector('input[name="password"]');
     const passConfirm = form.querySelector('input[name="password_confirm"]');
-    if (pass && passConfirm && pass.value && passConfirm.value && pass.value !== passConfirm.value) {
-        passConfirm.style.borderColor = '#ff6363';
-        valid = false;
+
+    if (pass && pass.value) {
+        if (pass.value.length < 6) {
+            pass.style.borderColor = '#ff6363';
+            valid = false;
+            errors.push('❌ Parola trebuie să aibă minim 6 caractere!');
+        }
+
+        if (passConfirm && passConfirm.value) {
+            if (pass.value !== passConfirm.value) {
+                passConfirm.style.borderColor = '#ff6363';
+                valid = false;
+                errors.push('❌ Parolele nu se potrivesc!');
+            }
+        }
+    }
+
+    if (!valid && errors.length > 0) {
+        alert(errors.join('\n'));
     }
 
     return valid;
 }
+
+// ============================================================
+// Password strength indicator (optional)
+// ============================================================
+function checkPasswordStrength(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    input.addEventListener('input', function () {
+        const pass = this.value;
+        let strength = 0;
+
+        if (pass.length >= 6) strength++;
+        if (pass.length >= 10) strength++;
+        if (/[a-z]/.test(pass) && /[A-Z]/.test(pass)) strength++;
+        if (/[0-9]/.test(pass)) strength++;
+        if (/[^a-zA-Z0-9]/.test(pass)) strength++;
+
+        const indicator = document.getElementById(inputId + '_strength');
+        if (indicator) {
+            indicator.className = 'password-strength strength-' + strength;
+            const labels = ['Foarte slabă', 'Slabă', 'Acceptabilă', 'Bună', 'Foarte bună'];
+            indicator.textContent = labels[strength - 1] || '';
+        }
+    });
+}
+
+// ============================================================
+// Disable button on valid form submit (prevent double-click)
+// ============================================================
+document.addEventListener('DOMContentLoaded', function () {
+    const forms = document.querySelectorAll('form');
+    forms.forEach(function (form) {
+        form.addEventListener('submit', function () {
+            if (!form.checkValidity()) return;
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.6';
+                submitBtn.style.cursor = 'not-allowed';
+            }
+        });
+    });
+});

@@ -1,31 +1,35 @@
 <?php
 
+/**
+ * MediTrust - Utility Functions
+ */
+
+// ============================================================
+// AUTH FUNCTIONS
+// ============================================================
+
 function esteLogat() {
-    return isset($_SESSION['user_id']) &&
-!empty($_SESSION['user_id']);
+    return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
 }
 
 function getTipUtilizator() {
-    return $_SESSION['tip_utilizator'] ?? null;
+    return $_SESSION['user_type'] ?? null;
 }
 
 function esteAdmin() {
     return esteLogat() && getTipUtilizator() === 'admin';
 }
 
-function esteMedic() {
-    return esteLogat() && getTipUtilizator() === 'medic';
+function esteDoctor() {
+    return esteLogat() && getTipUtilizator() === 'doctor';
 }
 
-function verificareLogin() {
-    if (!esteLogat()) {
-        header('Location: ' . BASE_URL . 'auth/login.php');
-        exit();
-    }
+function estePacient() {
+    return esteLogat() && getTipUtilizator() === 'patient';
 }
 
 function requireLogin($redirect = '../auth/login.php') {
-    if (!isset($_SESSION['user_id'])) {
+    if (!esteLogat()) {
         header('Location: ' . $redirect);
         exit;
     }
@@ -34,34 +38,56 @@ function requireLogin($redirect = '../auth/login.php') {
 function requireRole($role, $redirect = '../auth/login.php') {
     requireLogin($redirect);
 
-    if (($_SESSION['user_type'] ?? 'patient') !== $role) {
+    $userType = $_SESSION['user_type'] ?? '';
+
+    if ($userType !== $role) {
         header('Location: ' . $redirect);
         exit;
     }
 }
 
+// ============================================================
+// QUERY FUNCTIONS
+// ============================================================
+
 function executeQuery($sql, $conn) {
-   $result = $conn->query($sql);
+    $result = $conn->query($sql);
     if (!$result) {
-        die("Eroare Query: " . $conn->error);  
+        return false;
     }
-    return $result; 
+    return $result;
 }
 
 function getRow($result) {
-    return $result->fetch_assoc();
+    return $result ? $result->fetch_assoc() : null;
 }
 
 function getAll($result) {
-    return $result->fetch_all(MYSQLI_ASSOC);
+    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 }
 
 function getUserById($conn, $user_id) {
-    $user_stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
-    $user_stmt->bind_param("i", $user_id);
-    $user_stmt->execute();
-    return $user_stmt->get_result()->fetch_assoc();
+    $stmt = $conn->prepare("
+        SELECT 
+            u.*,
+            info.bio,
+            info.avatar,
+            info.specialty_id,
+            s.name AS specialty
+        FROM users u
+        LEFT JOIN info_doctori info ON u.id = info.user_id
+        LEFT JOIN specialties s ON info.specialty_id = s.id
+        WHERE u.id = ?
+        LIMIT 1
+    ");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc();
 }
+
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
 
 function displayStars($rating) {
     $full_stars = floor($rating);
@@ -77,8 +103,12 @@ function displayStars($rating) {
     return $stars;
 }
 
+// ============================================================
+// VALIDATION FUNCTIONS
+// ============================================================
+
 function esteEmailValid($email) {
-    return filter_var($email, FILTER_VALIDATE_EMAIL);
+    return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
 }
 
 function esteParolaValida($parola) {
@@ -89,53 +119,118 @@ function sanitizeInput($input, $conn) {
     return $conn->real_escape_string(trim($input));
 }
 
+// ============================================================
+// PASSWORD FUNCTIONS
+// ============================================================
+
 function hashParola($parola) {
-    return password_hash($parola, PASSWORD_BCRYPT);
+    return password_hash($parola, PASSWORD_DEFAULT);
 }
 
-function verifiYParola($parola, $hash) {
+function verifyPassword($parola, $hash) {
     return password_verify($parola, $hash);
 }
+
+// Alias pentru compatibilitate
+function verifikaParola($parola, $hash) {
+    return verifyPassword($parola, $hash);
+}
+
+// ============================================================
+// SESSION FLASH FUNCTIONS
+// ============================================================
 
 function setSuccess($mesaj) {
     $_SESSION['success'] = $mesaj;
 }
 
-function setEroare($mesaj) {
+function setError($mesaj) {
     $_SESSION['error'] = $mesaj;
 }
 
+// Alias pentru compatibilitate
+function setEroare($mesaj) {
+    setError($mesaj);
+}
+
 function getSuccess() {
-    if (isset($_SESSION['succes'])) {
-        $mesaj = $_SESSION['succes'];
-        unset($_SESSION['succes']);
+    if (isset($_SESSION['success'])) {
+        $mesaj = $_SESSION['success'];
+        unset($_SESSION['success']);
         return $mesaj;
     }
     return null;
 }
 
-function getEroare() {
-    if (isset($_SESSION['eroare'])) {
-        $mesaj = $_SESSION['eroare'];
-        unset($_SESSION['eroare']);
+function getError() {
+    if (isset($_SESSION['error'])) {
+        $mesaj = $_SESSION['error'];
+        unset($_SESSION['error']);
         return $mesaj;
     }
     return null;
 }
+
+// Alias pentru compatibilitate
+function getEroare() {
+    return getError();
+}
+
+// ============================================================
+// REDIRECT FUNCTIONS
+// ============================================================
 
 function redirect($url) {
     header('Location: ' . $url);
-    exit();
+    exit;
 }
 
+// ============================================================
+// DOCTOR FUNCTIONS
+// ============================================================
+
 function calculeazaRatingMedic($medic_id, $conn) {
-    $sql = "SELECT AVG(rating) as avg_rating, COUNT(*) as total
-FROM evaluari WHERE medic_id = medic_id";
-    $result = executeQuery($sql, $conn);
-    $row = getRow($result);
+    $sql = "
+        SELECT 
+            AVG(rating) AS avg_rating, 
+            COUNT(*) AS total
+        FROM reviews 
+        WHERE doctor_id = ?
+    ";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $medic_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+
     return [
         'rating' => round($row['avg_rating'] ?? 0, 1),
-        'evaluari' => $row['total'] ?? 0
+        'reviews' => (int)($row['total'] ?? 0)
     ];
+}
+
+// ============================================================
+// CSRF TOKEN FUNCTIONS
+// ============================================================
+
+function generateCsrfToken() {
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function verifyCsrfToken($token) {
+    return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+function adminVerifyCsrf() {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $token = $_POST['csrf_token'] ?? '';
+        if (!verifyCsrfToken($token)) {
+            http_response_code(403);
+            die('❌ Token CSRF invalid.');
+        }
+    }
 }
 ?>

@@ -8,13 +8,20 @@ $error   = '';
 // Load current admin details
 $admin = getUserById($conn, $_SESSION['user_id']);
 
+if (!$admin) {
+    session_unset();
+    session_destroy();
+    header('Location: login.php');
+    exit;
+}
+
 // ── Change password ──────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     adminVerifyCsrf();
 
-    $current_password  = $_POST['current_password']  ?? '';
-    $new_password      = $_POST['new_password']       ?? '';
-    $confirm_password  = $_POST['confirm_password']   ?? '';
+    $current_password = $_POST['current_password'] ?? '';
+    $new_password     = $_POST['new_password'] ?? '';
+    $confirm_password = $_POST['confirm_password'] ?? '';
 
     if (empty($current_password) || empty($new_password) || empty($confirm_password)) {
         $error = '❌ Toate câmpurile sunt obligatorii!';
@@ -27,11 +34,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     } else {
         $hashed = password_hash($new_password, PASSWORD_DEFAULT);
         $upd = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
-        $upd->bind_param('si', $hashed, $_SESSION['user_id']);
-        if ($upd->execute()) {
-            $message = '✅ Parola a fost schimbată cu succes!';
+
+        if (!$upd) {
+            $error = '❌ Eroare la pregătirea schimbării parolei!';
         } else {
-            $error = '❌ Eroare la schimbarea parolei!';
+            $upd->bind_param('si', $hashed, $_SESSION['user_id']);
+
+            if ($upd->execute()) {
+                $message = '✅ Parola a fost schimbată cu succes!';
+                $admin = getUserById($conn, $_SESSION['user_id']);
+            } else {
+                $error = '❌ Eroare la schimbarea parolei: ' . $upd->error;
+            }
         }
     }
 }
@@ -40,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     adminVerifyCsrf();
 
-    $name  = trim($_POST['name']  ?? '');
+    $name  = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
 
@@ -49,22 +63,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = '❌ Email invalid!';
     } else {
-        // Check email not taken by another user
         $chk = $conn->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
-        $chk->bind_param('si', $email, $_SESSION['user_id']);
-        $chk->execute();
-        if ($chk->get_result()->num_rows > 0) {
-            $error = '❌ Email-ul este deja folosit de alt cont!';
+
+        if (!$chk) {
+            $error = '❌ Eroare la verificarea emailului!';
         } else {
-            $upd = $conn->prepare("UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?");
-            $upd->bind_param('sssi', $name, $email, $phone, $_SESSION['user_id']);
-            if ($upd->execute()) {
-                $_SESSION['user_name'] = $name;
-                $message = '✅ Profilul a fost actualizat!';
-                // Reload
-                $admin = getUserById($conn, $_SESSION['user_id']);
+            $chk->bind_param('si', $email, $_SESSION['user_id']);
+            $chk->execute();
+            $chk_result = $chk->get_result();
+
+            if ($chk_result && $chk_result->num_rows > 0) {
+                $error = '❌ Email-ul este deja folosit de alt cont!';
             } else {
-                $error = '❌ Eroare la actualizare!';
+                $upd = $conn->prepare("UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?");
+
+                if (!$upd) {
+                    $error = '❌ Eroare la pregătirea actualizării profilului!';
+                } else {
+                    $upd->bind_param('sssi', $name, $email, $phone, $_SESSION['user_id']);
+
+                    if ($upd->execute()) {
+                        $_SESSION['user_name'] = $name;
+                        $message = '✅ Profilul a fost actualizat!';
+                        $admin = getUserById($conn, $_SESSION['user_id']);
+                    } else {
+                        $error = '❌ Eroare la actualizare: ' . $upd->error;
+                    }
+                }
             }
         }
     }
@@ -91,8 +116,17 @@ $adminPageTitle  = 'Setări Admin';
 
     <div class="admin-content">
 
-        <?php if ($message): ?><div class="alert alert-success" data-auto-dismiss="4000"><?php echo htmlspecialchars($message); ?></div><?php endif; ?>
-        <?php if ($error):   ?><div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
+        <?php if ($message): ?>
+            <div class="alert alert-success" data-auto-dismiss="4000">
+                <?php echo htmlspecialchars($message); ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($error): ?>
+            <div class="alert alert-error">
+                <?php echo htmlspecialchars($error); ?>
+            </div>
+        <?php endif; ?>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:25px;max-width:900px;">
 
@@ -108,26 +142,47 @@ $adminPageTitle  = 'Setări Admin';
 
                         <div class="form-group">
                             <label for="name">Nume complet</label>
-                            <input type="text" id="name" name="name" class="form-control"
-                                   value="<?php echo htmlspecialchars($admin['name']); ?>"
-                                   required maxlength="150">
+                            <input
+                                type="text"
+                                id="name"
+                                name="name"
+                                class="form-control"
+                                value="<?php echo htmlspecialchars($admin['name']); ?>"
+                                required
+                                maxlength="150"
+                            >
                         </div>
+
                         <div class="form-group">
                             <label for="email">Email</label>
-                            <input type="email" id="email" name="email" class="form-control"
-                                   value="<?php echo htmlspecialchars($admin['email']); ?>"
-                                   required maxlength="200">
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                class="form-control"
+                                value="<?php echo htmlspecialchars($admin['email']); ?>"
+                                required
+                                maxlength="200"
+                            >
                         </div>
+
                         <div class="form-group">
                             <label for="phone">Telefon</label>
-                            <input type="text" id="phone" name="phone" class="form-control"
-                                   value="<?php echo htmlspecialchars($admin['phone'] ?? ''); ?>"
-                                   maxlength="30">
+                            <input
+                                type="text"
+                                id="phone"
+                                name="phone"
+                                class="form-control"
+                                value="<?php echo htmlspecialchars($admin['phone'] ?? ''); ?>"
+                                maxlength="30"
+                            >
                         </div>
+
                         <div class="form-group">
                             <label>Rol</label>
                             <input type="text" class="form-control" value="Administrator" disabled>
                         </div>
+
                         <button type="submit" class="btn btn-primary">💾 Salvează</button>
                     </form>
                 </div>
@@ -145,19 +200,45 @@ $adminPageTitle  = 'Setări Admin';
 
                         <div class="form-group">
                             <label for="current_password">Parola Curentă</label>
-                            <input type="password" id="current_password" name="current_password" class="form-control"
-                                   placeholder="Parola actuală" required autocomplete="current-password">
+                            <input
+                                type="password"
+                                id="current_password"
+                                name="current_password"
+                                class="form-control"
+                                placeholder="Parola actuală"
+                                required
+                                autocomplete="current-password"
+                            >
                         </div>
+
                         <div class="form-group">
                             <label for="new_password">Parolă Nouă</label>
-                            <input type="password" id="new_password" name="new_password" class="form-control"
-                                   placeholder="Minim 6 caractere" required minlength="6" autocomplete="new-password">
+                            <input
+                                type="password"
+                                id="new_password"
+                                name="new_password"
+                                class="form-control"
+                                placeholder="Minim 6 caractere"
+                                required
+                                minlength="6"
+                                autocomplete="new-password"
+                            >
                         </div>
+
                         <div class="form-group">
                             <label for="confirm_password">Confirmă Parola Nouă</label>
-                            <input type="password" id="confirm_password" name="confirm_password" class="form-control"
-                                   placeholder="Repetă noua parolă" required minlength="6" autocomplete="new-password">
+                            <input
+                                type="password"
+                                id="confirm_password"
+                                name="confirm_password"
+                                class="form-control"
+                                placeholder="Repetă noua parolă"
+                                required
+                                minlength="6"
+                                autocomplete="new-password"
+                            >
                         </div>
+
                         <button type="submit" class="btn btn-warning">🔐 Schimbă Parola</button>
                     </form>
                 </div>
