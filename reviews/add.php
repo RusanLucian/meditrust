@@ -1,7 +1,6 @@
 <?php
 require_once '../bootstrap.php';
 
-// Doar pacienți
 requireRole('patient', '../auth/login.php');
 
 $patient_id = $_SESSION['user_id'];
@@ -10,7 +9,6 @@ $message = '';
 $error = '';
 $already_reviewed = false;
 
-// Generate CSRF token
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -20,7 +18,6 @@ if ($doctor_id <= 0) {
     exit;
 }
 
-// Preluare date doctor
 $doctor_stmt = $conn->prepare("
     SELECT 
         u.name,
@@ -39,7 +36,6 @@ if (!$doctor) {
     exit;
 }
 
-// Check dacă pacientul are deja review pentru medicul ăsta
 $check_review_stmt = $conn->prepare("
     SELECT id FROM reviews
     WHERE doctor_id = ? AND patient_id = ?
@@ -52,22 +48,50 @@ if ($check_review_stmt->get_result()->num_rows > 0) {
     $error = "❌ Ai deja un review pentru acest medic!";
 }
 
-// Submit review
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$already_reviewed) {
     if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
         $error = '❌ Cerere invalidă. Reîncarcă pagina și încearcă din nou.';
     } else {
-        $rating = isset($_POST['rating']) ? (int)$_POST['rating'] : 0;
+        $communication = isset($_POST['communication']) ? (int)$_POST['communication'] : 0;
+        $professionalism = isset($_POST['professionalism']) ? (int)$_POST['professionalism'] : 0;
+        $punctuality = isset($_POST['punctuality']) ? (int)$_POST['punctuality'] : 0;
+        $empathy = isset($_POST['empathy']) ? (int)$_POST['empathy'] : 0;
+        $recommendation = isset($_POST['recommendation']) ? (int)$_POST['recommendation'] : 0;
         $comment = trim($_POST['comment'] ?? '');
 
-        if ($rating < 1 || $rating > 5 || $comment === '') {
-            $error = "❌ Te rog completează rating și comentariu valid!";
-        } else {
+        $ratings = [$communication, $professionalism, $punctuality, $empathy, $recommendation];
+
+        foreach ($ratings as $value) {
+            if ($value < 1 || $value > 5) {
+                $error = "❌ Toate criteriile trebuie evaluate cu note între 1 și 5!";
+                break;
+            }
+        }
+
+        if (empty($error) && $comment === '') {
+            $error = "❌ Te rog completează comentariul!";
+        }
+
+        if (empty($error)) {
+            $rating = round(array_sum($ratings) / count($ratings));
+
             $insert_stmt = $conn->prepare("
-                INSERT INTO reviews (doctor_id, patient_id, rating, comment, created_at)
-                VALUES (?, ?, ?, ?, NOW())
+                INSERT INTO reviews 
+                (doctor_id, patient_id, rating, comment, created_at, communication, professionalism, punctuality, empathy, recommendation)
+                VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?)
             ");
-            $insert_stmt->bind_param("iiis", $doctor_id, $patient_id, $rating, $comment);
+            $insert_stmt->bind_param(
+                "iiisiiiii",
+                $doctor_id,
+                $patient_id,
+                $rating,
+                $comment,
+                $communication,
+                $professionalism,
+                $punctuality,
+                $empathy,
+                $recommendation
+            );
 
             if ($insert_stmt->execute()) {
                 $message = "✅ Review adăugat cu succes!";
@@ -78,6 +102,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$already_reviewed) {
             }
         }
     }
+}
+
+function ratingOptions($name, $label) {
+    $selected = $_POST[$name] ?? '';
+    echo '<div class="form-group">';
+    echo '<label>' . htmlspecialchars($label) . ' <span class="required">*</span></label>';
+    echo '<select name="' . htmlspecialchars($name) . '" required>';
+    echo '<option value="">Alege nota</option>';
+    for ($i = 5; $i >= 1; $i--) {
+        $isSelected = ((string)$selected === (string)$i) ? 'selected' : '';
+        echo '<option value="' . $i . '" ' . $isSelected . '>' . $i . ' stele</option>';
+    }
+    echo '</select>';
+    echo '</div>';
 }
 ?>
 
@@ -132,25 +170,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$already_reviewed) {
                 <form method="POST">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
 
-                    <div class="form-group">
-                        <label>⭐ Rating <span class="required">*</span></label>
-                        <div class="rating-input">
-                            <input type="radio" id="star5" name="rating" value="5" <?php echo (($_POST['rating'] ?? '') === '5') ? 'checked' : ''; ?> required>
-                            <label for="star5">★</label>
+                    <h3>⭐ Evaluare pe criterii</h3>
 
-                            <input type="radio" id="star4" name="rating" value="4" <?php echo (($_POST['rating'] ?? '') === '4') ? 'checked' : ''; ?>>
-                            <label for="star4">★</label>
-
-                            <input type="radio" id="star3" name="rating" value="3" <?php echo (($_POST['rating'] ?? '') === '3') ? 'checked' : ''; ?>>
-                            <label for="star3">★</label>
-
-                            <input type="radio" id="star2" name="rating" value="2" <?php echo (($_POST['rating'] ?? '') === '2') ? 'checked' : ''; ?>>
-                            <label for="star2">★</label>
-
-                            <input type="radio" id="star1" name="rating" value="1" <?php echo (($_POST['rating'] ?? '') === '1') ? 'checked' : ''; ?>>
-                            <label for="star1">★</label>
-                        </div>
-                    </div>
+                    <?php
+                    ratingOptions('communication', 'Comunicare');
+                    ratingOptions('professionalism', 'Profesionalism');
+                    ratingOptions('punctuality', 'Punctualitate');
+                    ratingOptions('empathy', 'Empatie');
+                    ratingOptions('recommendation', 'Recomandare');
+                    ?>
 
                     <div class="form-group">
                         <label for="comment">💬 Comentariu <span class="required">*</span></label>
