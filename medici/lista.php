@@ -1,7 +1,7 @@
 <?php
 require_once '../bootstrap.php';
 
-// Fetch all doctors with their specialties
+// Fetch doctors with specialties and average rating
 $query = "
     SELECT 
         u.id, 
@@ -11,12 +11,15 @@ $query = "
         s.name AS specialty,
         s.id AS specialty_id,
         info.bio,
-        info.avatar
+        info.avatar,
+        IFNULL(AVG(r.rating), 0) AS avg_rating
     FROM users u
     LEFT JOIN info_doctori info ON u.id = info.user_id
     LEFT JOIN specialties s ON info.specialty_id = s.id
+    LEFT JOIN reviews r ON u.id = r.doctor_id
     WHERE u.user_type = 'doctor'
-    ORDER BY s.name, u.name
+    GROUP BY u.id, u.name, u.email, u.phone, s.name, s.id, info.bio, info.avatar
+    ORDER BY avg_rating DESC, s.name, u.name
 ";
 
 $doctors = [];
@@ -40,11 +43,21 @@ if ($specialty_result) {
     $specialties = $specialty_result->fetch_all(MYSQLI_ASSOC);
 }
 
+// Filters
 $filtered_doctors = $doctors;
-if (!empty($_GET['specialty'])) {
-    $specialty_filter = (int)$_GET['specialty'];
-    $filtered_doctors = array_filter($doctors, function ($d) use ($specialty_filter) {
-        return (int)($d['specialty_id'] ?? 0) === $specialty_filter;
+
+$selected_specialty = $_GET['specialty'] ?? '';
+$selected_rating = $_GET['rating'] ?? '';
+
+if (!empty($selected_specialty)) {
+    $filtered_doctors = array_filter($filtered_doctors, function ($d) use ($selected_specialty) {
+        return (int)($d['specialty_id'] ?? 0) === (int)$selected_specialty;
+    });
+}
+
+if (!empty($selected_rating)) {
+    $filtered_doctors = array_filter($filtered_doctors, function ($d) use ($selected_rating) {
+        return (float)$d['avg_rating'] >= (float)$selected_rating;
     });
 }
 
@@ -88,18 +101,32 @@ $is_logged_in = isset($_SESSION['user_id']);
 
         <div class="filters">
             <h2>Filtrare</h2>
+
             <form method="GET" class="filter-form">
                 <div class="filter-group">
                     <select id="specialty" name="specialty" onchange="this.form.submit()">
                         <option value="">-- Toate specialitățile --</option>
                         <?php foreach ($specialties as $spec): ?>
                             <option value="<?php echo (int)$spec['id']; ?>"
-                                <?php echo (string)($_GET['specialty'] ?? '') === (string)$spec['id'] ? 'selected' : ''; ?>>
+                                <?php echo (string)$selected_specialty === (string)$spec['id'] ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($spec['name']); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
+
+                <div class="filter-group">
+                    <select id="rating" name="rating" onchange="this.form.submit()">
+                        <option value="">-- Rating minim --</option>
+                        <option value="3" <?php echo (string)$selected_rating === '3' ? 'selected' : ''; ?>>⭐ 3+</option>
+                        <option value="4" <?php echo (string)$selected_rating === '4' ? 'selected' : ''; ?>>⭐ 4+</option>
+                        <option value="5" <?php echo (string)$selected_rating === '5' ? 'selected' : ''; ?>>⭐ 5</option>
+                    </select>
+                </div>
+
+                <?php if (!empty($selected_specialty) || !empty($selected_rating)): ?>
+                    <a href="lista.php" class="back-btn">Resetează filtrele</a>
+                <?php endif; ?>
             </form>
         </div>
 
@@ -107,7 +134,7 @@ $is_logged_in = isset($_SESSION['user_id']);
             <?php if (empty($filtered_doctors)): ?>
                 <div class="no-data">
                     <div class="no-data-icon">👨‍⚕️</div>
-                    <p>Nu am găsit medici cu această specialitate.</p>
+                    <p>Nu am găsit medici pentru filtrele selectate.</p>
                 </div>
             <?php else: ?>
                 <?php foreach ($filtered_doctors as $doctor): ?>
@@ -117,10 +144,24 @@ $is_logged_in = isset($_SESSION['user_id']);
                         ? mb_strimwidth($bio_preview, 0, 100, '...')
                         : 'Fără descriere disponibilă.';
                     ?>
+
                     <div class="doctor-card">
-                        <div class="doctor-header">
-                            <h3><?php echo htmlspecialchars($doctor['name']); ?></h3>
-                            <p><?php echo htmlspecialchars($doctor['specialty'] ?? 'Specialitate indisponibilă'); ?></p>
+                        <div class="doctor-header doctor-header-with-avatar">
+                            <div class="doctor-card-avatar">
+                                <?php if (!empty($doctor['avatar'])): ?>
+                                    <img class="doctor-card-avatar-img"
+                                         src="../img/<?php echo htmlspecialchars($doctor['avatar']); ?>"
+                                         alt="<?php echo htmlspecialchars($doctor['name']); ?>">
+                                <?php else: ?>
+                                    👨‍⚕️
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="doctor-card-title">
+                                <h3><?php echo htmlspecialchars($doctor['name']); ?></h3>
+                                <p><?php echo htmlspecialchars($doctor['specialty'] ?? 'Specialitate indisponibilă'); ?></p>
+                                <p>⭐ <?php echo number_format((float)$doctor['avg_rating'], 1); ?>/5</p>
+                            </div>
                         </div>
 
                         <div class="doctor-body">
