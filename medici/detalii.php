@@ -40,6 +40,11 @@ if (!$doctor) {
 $reviews_query = "
     SELECT 
         r.rating,
+        r.communication,
+        r.professionalism,
+        r.punctuality,
+        r.empathy,
+        r.recommendation,
         r.comment,
         r.created_at,
         u.name AS patient_name
@@ -55,11 +60,21 @@ $reviews_stmt->execute();
 $reviews_result = $reviews_stmt->get_result();
 $reviews = $reviews_result->fetch_all(MYSQLI_ASSOC);
 
-// Calculate average rating
+// Calculate average ratings
 $avg_rating = 0;
+$avg_communication = 0;
+$avg_professionalism = 0;
+$avg_punctuality = 0;
+$avg_empathy = 0;
+$avg_recommendation = 0;
+
 if (!empty($reviews)) {
-    $total_rating = array_sum(array_column($reviews, 'rating'));
-    $avg_rating = round($total_rating / count($reviews), 1);
+    $avg_rating = round(array_sum(array_column($reviews, 'rating')) / count($reviews), 1);
+    $avg_communication = round(array_sum(array_column($reviews, 'communication')) / count($reviews), 1);
+    $avg_professionalism = round(array_sum(array_column($reviews, 'professionalism')) / count($reviews), 1);
+    $avg_punctuality = round(array_sum(array_column($reviews, 'punctuality')) / count($reviews), 1);
+    $avg_empathy = round(array_sum(array_column($reviews, 'empathy')) / count($reviews), 1);
+    $avg_recommendation = round(array_sum(array_column($reviews, 'recommendation')) / count($reviews), 1);
 }
 
 $is_logged_in = isset($_SESSION['user_id']);
@@ -99,7 +114,9 @@ $is_patient = (($_SESSION['user_type'] ?? '') === 'patient');
             <div class="doctor-detail-header">
                 <div class="doctor-avatar">
                     <?php if (!empty($doctor['avatar'])): ?>
-                        <img src="../uploads/<?php echo htmlspecialchars($doctor['avatar']); ?>" alt="<?php echo htmlspecialchars($doctor['name']); ?>" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                        <img class="doctor-avatar-img"
+                             src="../img/<?php echo htmlspecialchars($doctor['avatar']); ?>"
+                             alt="<?php echo htmlspecialchars($doctor['name']); ?>">
                     <?php else: ?>
                         👨‍⚕️
                     <?php endif; ?>
@@ -114,7 +131,8 @@ $is_patient = (($_SESSION['user_type'] ?? '') === 'patient');
             </div>
 
             <div class="rating-section">
-                <h3>Rating</h3>
+                <h3>⭐ Evaluare generală</h3>
+
                 <div class="rating-display">
                     <div class="rating-stars">
                         ⭐ <?php echo $avg_rating; ?>/5
@@ -124,6 +142,17 @@ $is_patient = (($_SESSION['user_type'] ?? '') === 'patient');
                         <div class="rating-count"><?php echo count($reviews); ?> recenzii</div>
                     </div>
                 </div>
+
+                <?php if (!empty($reviews)): ?>
+                    <div class="rating-criteria">
+                        <h4>Evaluare pe criterii</h4>
+                        <p>💬 Comunicare: <strong><?php echo $avg_communication; ?>/5</strong></p>
+                        <p>👨‍⚕️ Profesionalism: <strong><?php echo $avg_professionalism; ?>/5</strong></p>
+                        <p>⏱️ Punctualitate: <strong><?php echo $avg_punctuality; ?>/5</strong></p>
+                        <p>🤝 Empatie: <strong><?php echo $avg_empathy; ?>/5</strong></p>
+                        <p>✅ Recomandare: <strong><?php echo $avg_recommendation; ?>/5</strong></p>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <div class="actions-section">
@@ -178,13 +207,30 @@ $is_patient = (($_SESSION['user_type'] ?? '') === 'patient');
                     <div class="review-item">
                         <div class="review-header">
                             <div>
-                                <div class="review-author"><?php echo htmlspecialchars($review['patient_name']); ?></div>
-                                <div class="review-rating">⭐ <?php echo (int)$review['rating']; ?>/5</div>
+                                <div class="review-author">
+                                    <?php echo htmlspecialchars($review['patient_name']); ?>
+                                </div>
+
+                                <div class="review-rating">
+                                    ⭐ <?php echo (int)$review['rating']; ?>/5
+                                </div>
+
+                                <div class="review-criteria">
+                                    <small>
+                                        💬 Comunicare: <?php echo (int)$review['communication']; ?>/5 |
+                                        👨‍⚕️ Profesionalism: <?php echo (int)$review['professionalism']; ?>/5 |
+                                        ⏱️ Punctualitate: <?php echo (int)$review['punctuality']; ?>/5 |
+                                        🤝 Empatie: <?php echo (int)$review['empathy']; ?>/5 |
+                                        ✅ Recomandare: <?php echo (int)$review['recommendation']; ?>/5
+                                    </small>
+                                </div>
                             </div>
+
                             <div class="review-date">
                                 <?php echo date('d.m.Y H:i', strtotime($review['created_at'])); ?>
                             </div>
                         </div>
+
                         <div class="review-text">
                             <?php echo htmlspecialchars($review['comment']); ?>
                         </div>
