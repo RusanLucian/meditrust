@@ -11,7 +11,7 @@ $message = '';
 $error = '';
 $already_reviewed = false;
 
-// Generare token CSRF
+// Generate CSRF token
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -345,77 +345,53 @@ if ($doctor_id <= 0) {
     exit;
 }
 
-// Obtinem medicul
-$doctor = getDoctor($conn, $doctor_id);
+// Preluare date doctor
+$doctor_stmt = $conn->prepare("
+    SELECT 
+        u.name,
+        s.name AS specialty
+    FROM users u
+    LEFT JOIN info_doctori info ON u.id = info.user_id
+    LEFT JOIN specialties s ON info.specialty_id = s.id
+    WHERE u.id = ? AND u.user_type = 'doctor'
+");
+$doctor_stmt->bind_param("i", $doctor_id);
+$doctor_stmt->execute();
+$doctor = $doctor_stmt->get_result()->fetch_assoc();
 
 if (!$doctor) {
     header("Location: ../medici/lista.php");
     exit;
 }
 
-// Verificam daca exista deja o recenzie
-$already_reviewed = hasReviewedDoctor(
-    $conn,
-    $doctor_id,
-    $patient_id
-);
+// Check dacă pacientul are deja review pentru medicul ăsta
+$check_review_stmt = $conn->prepare("
+    SELECT id FROM reviews
+    WHERE doctor_id = ? AND patient_id = ?
+");
+$check_review_stmt->bind_param("ii", $doctor_id, $patient_id);
+$check_review_stmt->execute();
 
 if ($already_reviewed) {
     $error = "❌ Ai deja un review pentru acest medic!";
 }
 
-// Verificam eligibilitatea pentru recenzie
-if (!$already_reviewed && !hasCompletedAppointment(
-    $conn,
-    $doctor_id,
-    $patient_id
-)) {
-    $error = "❌ Poți evalua acest medic doar după o consultație finalizată!";
-    $already_reviewed = true;
-}
-
-// Procesare formular
-if (
-    $_SERVER['REQUEST_METHOD'] === 'POST'
-    && !$already_reviewed
-) {
-
-    // Verificare CSRF
-    if (!hash_equals(
-        $_SESSION['csrf_token'] ?? '',
-        $_POST['csrf_token'] ?? ''
-    )) {
-        $error = "❌ Cerere invalidă. Reîncarcă pagina și încearcă din nou!";
-
+// Submit review
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$already_reviewed) {
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
+        $error = '❌ Cerere invalidă. Reîncarcă pagina și încearcă din nou.';
     } else {
-
-        // Preluare evaluari
-        $ratings = [
-            'communication' => (int) ($_POST['communication'] ?? 0),
-            'professionalism' => (int) ($_POST['professionalism'] ?? 0),
-            'punctuality' => (int) ($_POST['punctuality'] ?? 0),
-            'empathy' => (int) ($_POST['empathy'] ?? 0),
-            'recommendation' => (int) ($_POST['recommendation'] ?? 0)
-        ];
-
+        $rating = isset($_POST['rating']) ? (int)$_POST['rating'] : 0;
         $comment = trim($_POST['comment'] ?? '');
 
-        // Validare date
-        $error = validateReview(
-            $ratings,
-            $comment
-        ) ?? '';
-
-        if ($error === '') {
-
-            // Salvare recenzie
-            $error = submitReview(
-                $conn,
-                $doctor_id,
-                $patient_id,
-                $ratings,
-                $comment
-            ) ?? '';
+        if ($rating < 1 || $rating > 5 || $comment === '') {
+            $error = "❌ Te rog completează rating și comentariu valid!";
+        } else {
+            $insert_stmt = $conn->prepare("
+                INSERT INTO reviews (doctor_id, patient_id, rating, comment, created_at)
+                VALUES (?, ?, ?, ?, NOW())
+            ");
+            $insert_stmt->bind_param("iiis", $doctor_id, $patient_id, $rating, $comment);
 
             if ($error === '') {
                 $message = "✅ Review adăugat cu succes!";
@@ -429,6 +405,20 @@ if (
             }
         }
     }
+}
+
+function ratingOptions($name, $label) {
+    $selected = $_POST[$name] ?? '';
+    echo '<div class="form-group">';
+    echo '<label>' . htmlspecialchars($label) . ' <span class="required">*</span></label>';
+    echo '<select name="' . htmlspecialchars($name) . '" required>';
+    echo '<option value="">Alege nota</option>';
+    for ($i = 5; $i >= 1; $i--) {
+        $isSelected = ((string)$selected === (string)$i) ? 'selected' : '';
+        echo '<option value="' . $i . '" ' . $isSelected . '>' . $i . ' stele</option>';
+    }
+    echo '</select>';
+    echo '</div>';
 }
 ?>
 

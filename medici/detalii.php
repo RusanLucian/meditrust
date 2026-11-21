@@ -87,45 +87,49 @@ if (!$doctor) {
     exit;
 }
 
-$review_message = '';
-$review_error = '';
+// Fetch reviews for this doctor
+$reviews_query = "
+    SELECT 
+        r.rating,
+        r.communication,
+        r.professionalism,
+        r.punctuality,
+        r.empathy,
+        r.recommendation,
+        r.comment,
+        r.created_at,
+        u.name AS patient_name
+    FROM reviews r
+    JOIN users u ON r.patient_id = u.id
+    WHERE r.doctor_id = ?
+    ORDER BY r.created_at DESC
+";
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_review'])) {
-    $submittedToken = $_POST['csrf_token'] ?? null;
-    $reviewId = filter_var($_POST['review_id'] ?? null, FILTER_VALIDATE_INT);
+$reviews_stmt = $conn->prepare($reviews_query);
+$reviews_stmt->bind_param("i", $doctor_id);
+$reviews_stmt->execute();
+$reviews_result = $reviews_stmt->get_result();
+$reviews = $reviews_result->fetch_all(MYSQLI_ASSOC);
 
-    if (!$is_own_profile) {
-        http_response_code(403);
-        $review_error = '❌ Nu ai permisiunea să ștergi această recenzie.';
-    } elseif (!is_string($submittedToken) ||
-              !hash_equals($_SESSION['csrf_token'], $submittedToken)) {
-        $review_error = '❌ Cerere invalidă. Reîncarcă pagina și încearcă din nou.';
-    } elseif (!$reviewId || $reviewId <= 0) {
-        $review_error = '❌ Recenzie invalidă.';
-    } else {
-        try {
-            if (deleteDoctorReview($conn, $reviewId, $doctor_id)) {
-                $review_message = '✅ Recenzia a fost ștearsă cu succes!';
-                $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-            } else {
-                $review_error = '❌ Recenzia nu există sau nu aparține acestui medic.';
-            }
-        } catch (mysqli_sql_exception $e) {
-            error_log('MediTrust - eroare stergere recenzie: ' . $e->getMessage());
-            $review_error = '❌ A apărut o eroare la ștergerea recenziei.';
-        }
-    }
+// Calculate average ratings
+$avg_rating = 0;
+$avg_communication = 0;
+$avg_professionalism = 0;
+$avg_punctuality = 0;
+$avg_empathy = 0;
+$avg_recommendation = 0;
+
+if (!empty($reviews)) {
+    $avg_rating = round(array_sum(array_column($reviews, 'rating')) / count($reviews), 1);
+    $avg_communication = round(array_sum(array_column($reviews, 'communication')) / count($reviews), 1);
+    $avg_professionalism = round(array_sum(array_column($reviews, 'professionalism')) / count($reviews), 1);
+    $avg_punctuality = round(array_sum(array_column($reviews, 'punctuality')) / count($reviews), 1);
+    $avg_empathy = round(array_sum(array_column($reviews, 'empathy')) / count($reviews), 1);
+    $avg_recommendation = round(array_sum(array_column($reviews, 'recommendation')) / count($reviews), 1);
 }
 
-// Citim recenziile DUPA procesarea stergerii, pentru medii actualizate.
-$reviews = getDoctorReviews($conn, $doctor_id);
-$averages = calculateReviewAverages($reviews);
-$avg_rating = $averages['rating'];
-$avg_communication = $averages['communication'];
-$avg_professionalism = $averages['professionalism'];
-$avg_punctuality = $averages['punctuality'];
-$avg_empathy = $averages['empathy'];
-$avg_recommendation = $averages['recommendation'];
+$is_logged_in = isset($_SESSION['user_id']);
+$is_patient = (($_SESSION['user_type'] ?? '') === 'patient');
 ?>
 
 <!DOCTYPE html>
