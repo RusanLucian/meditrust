@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     $app_id    = (int)($_POST['appointment_id'] ?? 0);
     $newStatus = $_POST['status'] ?? '';
 
-    $allowedStatuses = ['scheduled', 'confirmed', 'completed', 'cancelled', 'rejected', 'pending'];
+    $allowedStatuses = ['scheduled', 'completed', 'cancelled'];
     if ($app_id > 0 && in_array($newStatus, $allowedStatuses, true)) {
         $upd = $conn->prepare("UPDATE appointments SET status = ? WHERE id = ?");
         $upd->bind_param('si', $newStatus, $app_id);
@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
 $filterStatus = $_GET['status'] ?? '';
 $filterSearch = trim($_GET['search'] ?? '');
 
-$allowedStatuses = ['scheduled', 'confirmed', 'completed', 'cancelled', 'rejected', 'pending'];
+$allowedStatuses = ['scheduled', 'completed', 'cancelled'];
 $filterStatus = in_array($filterStatus, $allowedStatuses, true) ? $filterStatus : '';
 
 $query  = "
@@ -102,15 +102,26 @@ $adminPageTitle  = 'Gestionare Programări';
                     <input type="text" name="search" placeholder="🔍 Caută pacient/doctor..."
                            value="<?php echo htmlspecialchars($filterSearch); ?>"
                            style="min-width:200px;">
+                    
                     <select name="status">
                         <option value="">Toate statusurile</option>
-                        <option value="scheduled"  <?php echo $filterStatus === 'scheduled'  ? 'selected' : ''; ?>>Programat</option>
-                        <option value="pending"    <?php echo $filterStatus === 'pending'    ? 'selected' : ''; ?>>În așteptare</option>
-                        <option value="confirmed"  <?php echo $filterStatus === 'confirmed'  ? 'selected' : ''; ?>>Confirmat</option>
-                        <option value="completed"  <?php echo $filterStatus === 'completed'  ? 'selected' : ''; ?>>Finalizat</option>
-                        <option value="cancelled"  <?php echo $filterStatus === 'cancelled'  ? 'selected' : ''; ?>>Anulat</option>
-                        <option value="rejected"   <?php echo $filterStatus === 'rejected'   ? 'selected' : ''; ?>>Respins</option>
+
+                        <option value="scheduled"
+                            <?php echo $filterStatus === 'scheduled' ? 'selected' : ''; ?>>
+                            Programat
+                        </option>
+
+                        <option value="completed"
+                            <?php echo $filterStatus === 'completed' ? 'selected' : ''; ?>>
+                            Finalizat
+                        </option>
+
+                        <option value="cancelled"
+                            <?php echo $filterStatus === 'cancelled' ? 'selected' : ''; ?>>
+                            Anulat
+                        </option>
                     </select>
+
                     <button type="submit" class="btn btn-secondary">Filtrează</button>
                     <?php if ($filterStatus || $filterSearch): ?>
                         <a href="appointments.php" class="btn btn-outline">✕ Resetează</a>
@@ -170,10 +181,10 @@ $adminPageTitle  = 'Gestionare Programări';
                                                 style="padding:5px 8px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:12px;cursor:pointer;background:#fff;">
                                             <option value="">— Schimbă status —</option>
                                             <option value="scheduled">Programat</option>
-                                            <option value="confirmed">Confirmă</option>
+                                            
                                             <option value="completed">Finalizează</option>
                                             <option value="cancelled">Anulează</option>
-                                            <option value="rejected">Respinge</option>
+                                            
                                         </select>
                                     </form>
                                 </td>

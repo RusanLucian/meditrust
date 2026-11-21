@@ -13,16 +13,17 @@ if (ENV === 'dev') {
 }
 
 // DATABASE CREDENTIALS
-define('DB_HOST', 'localhost');
+define('DB_HOST', '127.0.0.1');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_NAME', 'meditrust');
+define('DB_PORT', 3307);
 
 // MYSQLI ERROR MODE
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 // CONNECT DATABASE
-$conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+$conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
 
 // SET CHARSET
 $conn->set_charset("utf8mb4");

@@ -26,7 +26,7 @@ if (isset($_SESSION['user_id'])) {
                 <img src="img/meditrust-logo.png" alt="MediTrust Logo" class="landing-logo">
                 <div>
                     <h1>MediTrust</h1>
-                    <p class="landing-subtitle">Platformă digitală pentru alegerea medicului potrivit și gestionarea rapidă a programărilor.</p>
+                    <p class="landing-subtitle">Platformă online pentru evaluarea personalului medical și gestionarea programărilor.</p>
                 </div>
             </div>
 

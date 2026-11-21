@@ -100,6 +100,9 @@ INSERT INTO `info_doctori` (`id`, `user_id`, `specialty_id`, `bio`, `avatar`, `c
 -- --------------------------------------------------------
 
 --
+-- --------------------------------------------------------
+
+--
 -- Structură tabel pentru tabel `reviews`
 --
 
@@ -107,26 +110,74 @@ CREATE TABLE `reviews` (
   `id` int(11) NOT NULL,
   `doctor_id` int(11) NOT NULL,
   `patient_id` int(11) NOT NULL,
+
   `rating` int(11) NOT NULL CHECK (`rating` >= 1 and `rating` <= 5),
+
+  `communication` int(1) NOT NULL DEFAULT 5,
+  `professionalism` int(1) NOT NULL DEFAULT 5,
+  `punctuality` int(1) NOT NULL DEFAULT 5,
+  `empathy` int(1) NOT NULL DEFAULT 5,
+  `recommendation` int(1) NOT NULL DEFAULT 5,
+
   `comment` text NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Eliminarea datelor din tabel `reviews`
 --
 
-INSERT INTO `reviews` (`id`, `doctor_id`, `patient_id`, `rating`, `comment`, `created_at`) VALUES
-(21, 3, 1, 5, 'Medic foarte profesionist! Ma simt mult mai bine. Recomand!', '2026-02-24 13:37:32'),
-(22, 4, 1, 5, 'Oftalmolog de top! Foarte competent si amabil.', '2026-02-24 13:37:32'),
-(23, 5, 1, 5, 'Dermatolog exceptional! Probleme rezolvate rapid.', '2026-02-24 13:37:32'),
-(24, 6, 1, 4, 'Medic bun, consulta utila.', '2026-02-24 13:37:32'),
-(25, 7, 1, 5, 'Pediatru grozav! Foarte atenta cu copiii.', '2026-02-24 13:37:32'),
-(26, 8, 1, 4, 'Ortoped profesionist! Recomand.', '2026-02-24 13:37:32'),
-(27, 10, 1, 5, 'Endocrinolog excelent! Foarte dedicat.', '2026-02-24 13:37:32'),
-(28, 11, 1, 5, 'Cardiolog de TOP! Super profesionist.', '2026-02-24 13:37:32'),
-(29, 12, 1, 4, 'Ginecolog bun! Consulta detaliata.', '2026-02-24 13:37:32'),
-(30, 14, 1, 5, 'Reumatolog exceptional! Foarte empatic.', '2026-02-24 13:37:32');
+INSERT INTO `reviews`
+(`id`, `doctor_id`, `patient_id`,
+`rating`,
+`communication`,
+`professionalism`,
+`punctuality`,
+`empathy`,
+`recommendation`,
+`comment`,
+`created_at`) VALUES
+
+(21, 3, 1, 5, 5,5,5,5,5,
+'Medic foarte profesionist! Ma simt mult mai bine. Recomand!',
+'2026-02-24 13:37:32'),
+
+(22, 4, 1, 5, 5,5,5,5,5,
+'Oftalmolog de top! Foarte competent si amabil.',
+'2026-02-24 13:37:32'),
+
+(23, 5, 1, 5, 5,5,5,5,5,
+'Dermatolog exceptional! Probleme rezolvate rapid.',
+'2026-02-24 13:37:32'),
+
+(24, 6, 1, 4, 4,4,4,4,4,
+'Medic bun, consulta utila.',
+'2026-02-24 13:37:32'),
+
+(25, 7, 1, 5, 5,5,5,5,5,
+'Pediatru grozav! Foarte atenta cu copiii.',
+'2026-02-24 13:37:32'),
+
+(26, 8, 1, 4, 4,4,4,4,4,
+'Ortoped profesionist! Recomand.',
+'2026-02-24 13:37:32'),
+
+(27, 10, 1, 5, 5,5,5,5,5,
+'Endocrinolog excelent! Foarte dedicat.',
+'2026-02-24 13:37:32'),
+
+(28, 11, 1, 5, 5,5,5,5,5,
+'Cardiolog de TOP! Super profesionist.',
+'2026-02-24 13:37:32'),
+
+(29, 12, 1, 4, 4,4,4,4,4,
+'Ginecolog bun! Consulta detaliata.',
+'2026-02-24 13:37:32'),
+
+(30, 14, 1, 5, 5,5,5,5,5,
+'Reumatolog exceptional! Foarte empatic.',
+'2026-02-24 13:37:32');
 
 -- --------------------------------------------------------
 
