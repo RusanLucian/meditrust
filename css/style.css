@@ -4,6 +4,10 @@
     box-sizing: border-box;
 }
 
+a {
+    text-decoration: none;
+    
+}
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #e8eef7 0%, #f0f4ff 100%);
@@ -1940,5 +1944,151 @@ tbody tr:last-child td {
 
     .doctor-appointments-hero h2 {
         font-size: 25px;
+    }
+}
+
+.appointments-header {
+    padding-block: 12px;
+}
+
+
+/* CONTAINER PRINCIPAL */
+
+.doctor-profile-header {
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr);
+    gap: 25px;
+    align-items: start;
+    padding: 25px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* POZA MEDICULUI */
+
+.doctor-profile-avatar {
+    width: 100px;
+    height: 100px;
+}
+
+.doctor-profile-avatar img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+/* INFORMAȚII MEDIC */
+
+.doctor-profile-info {
+    min-width: 0;
+}
+
+.doctor-profile-info h1 {
+    margin: 0 0 12px;
+    font-size: 1.8rem;
+    color: #222;
+}
+
+.specialty-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    margin: 0 0 12px;
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.specialty-desc {
+    color: #555;
+    line-height: 1.6;
+    margin: 5px 0 15px;
+}
+
+/* DATE DE CONTACT */
+
+.contact-details {
+    margin-top: 15px;
+}
+
+.contact-details p {
+    margin: 8px 0;
+    color: #444;
+    overflow-wrap: anywhere;
+}
+
+.contact-details strong {
+    color: #222;
+}
+
+/* ACTIUNI MEDIC */
+
+.doctor-profile-actions {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.doctor-profile-actions a {
+    display: block;
+    padding: 12px 18px;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.doctor-profile-actions .btn-primary {
+    background: #1976d2;
+    color: #fff;
+}
+
+.doctor-profile-actions .btn-primary:hover {
+    background: #1565c0;
+}
+
+.badge-reviewed {
+    display: block;
+    text-align: center;
+    padding: 8px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-radius: 4px;
+}
+
+/* RESPONSIVE - MOBIL */
+
+@media (max-width: 768px) {
+    .doctor-profile-header {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        padding: 20px;
+    }
+
+    .doctor-profile-avatar {
+        margin: 0 auto;
+    }
+
+    .doctor-profile-info {
+        text-align: center;
+    }
+
+    .doctor-profile-info h1 {
+        font-size: 1.5rem;
+    }
+
+    .doctor-profile-actions {
+        grid-column: 1;
+        width: 100%;
+    }
+
+    .contact-details {
+        text-align: left;
     }
 }

@@ -1,63 +1,27 @@
 <?php
-require_once 'bootstrap.php';
 
-if (isset($_SESSION['user_id'])) {
-    if (($_SESSION['user_type'] ?? '') === 'admin') {
-        header("Location: admin/dashboard.php");
-    } else {
-        header("Location: auth/dashboard.php");
-    }
-    exit;
-}
-?>
+/**
+ * MediTrust - Front Controller
+ */
 
-<!DOCTYPE html>
-<html lang="ro">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MediTrust - Evaluare Medici</title>
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body class="landing-page">
-    <main class="container landing-shell">
-        <section class="landing-hero">
-            <div class="landing-brand">
-                <img src="img/meditrust-logo.png" alt="MediTrust Logo" class="landing-logo">
-                <div>
-                    <h1>MediTrust</h1>
-                    <p class="landing-subtitle">Platformă online pentru evaluarea personalului medical și gestionarea programărilor.</p>
-                </div>
-            </div>
+// 1. Încarcă configurația globală
+require_once __DIR__ . '/config.php';
 
-            <div class="landing-actions">
-                <a href="auth/login.php" class="landing-btn primary">🔓 Conectare</a>
-                <a href="auth/register.php" class="landing-btn secondary">📝 Înregistrare</a>
-                <a href="medici/lista.php" class="landing-link">sau vezi lista de medici</a>
-            </div>
-        </section>
+// 2. Înregistrează Autoloader-ul PSR-4 pentru namespace-ul App\
+require_once __DIR__ . '/app/Core/Autoloader.php';
+\App\Core\Autoloader::register();
 
-        <section class="landing-features">
-            <h2>✨ De ce MediTrust?</h2>
-            <div class="landing-feature-grid">
-                <a href="medici/lista.php" class="landing-feature-item">
-                    <strong>🔍 Caută Medici</strong>
-                    <span>Filtrezi rapid după specialitate și alegi medicul potrivit.</span>
-                </a>
-                <a href="medici/lista.php" class="landing-feature-item">
-                    <strong>⭐ Citește Recenzii</strong>
-                    <span>Vezi experiențele altor pacienți înainte să programezi consultația.</span>
-                </a>
-                <a href="auth/login.php" class="landing-feature-item">
-                    <strong>📅 Fă Programări</strong>
-                    <span>Programezi online în câteva secunde, direct din contul tău.</span>
-                </a>
-                <a href="medici/lista.php" class="landing-feature-item">
-                    <strong>💬 Lasă Feedback</strong>
-                    <span>Contribui cu recenzii utile pentru comunitatea MediTrust.</span>
-                </a>
-            </div>
-        </section>
-    </main>
-</body>
-</html>
+// 3. Inițializează sesiunea și ciclul de flash messages
+\App\Core\Session::start();
+\App\Core\Session::ageFlash();
+
+// 4. Încarcă funcțiile globale helper
+require_once __DIR__ . '/app/helpers.php';
+
+// 5. Încarcă definirea rutelor
+require_once __DIR__ . '/routes/web.php';
+
+// 6. Procesează cererea HTTP prin Router și trimite răspunsul
+$request = new \App\Core\Request();
+$response = \App\Core\Router::dispatch($request);
+$response->send();

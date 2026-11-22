@@ -1,0 +1,12 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /meditrust/
+
+    # Do not rewrite if physical file or folder exists
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Send all other requests to index.php
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>

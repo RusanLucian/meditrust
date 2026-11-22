@@ -1,16 +1,7 @@
 <?php
-// ENVIRONMENT
-define('ENV', 'dev'); // 'dev' sau 'prod'
 
-// ERROR HANDLING
-if (ENV === 'dev') {
-    error_reporting(E_ALL);
-    ini_set('display_errors', 1);
-} else {
-    error_reporting(0);
-    ini_set('display_errors', 0);
-    ini_set('log_errors', 1);
-}
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
 
 // DATABASE CREDENTIALS
 define('DB_HOST', '127.0.0.1');

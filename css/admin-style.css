@@ -960,3 +960,288 @@ body.admin-login-body {
 }
 
 .no-wrap { white-space: nowrap; }
+
+.appointments-header {
+    padding-block: 12px;
+}
+
+/* CONTAINER PRINCIPAL */
+
+.doctor-profile-header {
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr);
+    gap: 25px;
+    align-items: start;
+    padding: 25px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* POZA MEDICULUI */
+
+.doctor-profile-avatar {
+    width: 100px;
+    height: 100px;
+}
+
+.doctor-profile-avatar img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+/* INFORMAȚII MEDIC */
+
+.doctor-profile-info {
+    min-width: 0;
+}
+
+.doctor-profile-info h1 {
+    margin: 0 0 12px;
+    font-size: 1.8rem;
+    color: #222;
+}
+
+.specialty-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    margin: 0 0 12px;
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.specialty-desc {
+    color: #555;
+    line-height: 1.6;
+    margin: 5px 0 15px;
+}
+
+/* DATE DE CONTACT */
+
+.contact-details {
+    margin-top: 15px;
+}
+
+.contact-details p {
+    margin: 8px 0;
+    color: #444;
+    overflow-wrap: anywhere;
+}
+
+.contact-details strong {
+    color: #222;
+}
+
+/* ACTIUNI MEDIC */
+
+.doctor-profile-actions {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.doctor-profile-actions a {
+    display: block;
+    padding: 12px 18px;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.doctor-profile-actions .btn-primary {
+    background: #1976d2;
+    color: #fff;
+}
+
+.doctor-profile-actions .btn-primary:hover {
+    background: #1565c0;
+}
+
+.badge-reviewed {
+    display: block;
+    text-align: center;
+    padding: 8px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-radius: 4px;
+}
+
+/* RESPONSIVE - MOBIL */
+
+@media (max-width: 768px) {
+    .doctor-profile-header {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        padding: 20px;
+    }
+
+    .doctor-profile-avatar {
+        margin: 0 auto;
+    }
+
+    .doctor-profile-info {
+        text-align: center;
+    }
+
+    .doctor-profile-info h1 {
+        font-size: 1.5rem;
+    }
+
+    .doctor-profile-actions {
+        grid-column: 1;
+        width: 100%;
+    }
+
+    .contact-details {
+        text-align: left;
+    }
+}
+
+
+
+/* ============ TABLES ============ */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    margin-top: 30px;
+}
+
+thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+th {
+    padding: 16px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 15px;
+}
+
+td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+    color: #555;
+}
+
+tbody tr {
+    transition: all 0.3s ease;
+}
+
+tbody tr:hover {
+    background: linear-gradient(90deg, #f5f7ff 0%, #f0f4ff 100%);
+    box-shadow: inset 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+tbody tr:last-child td {
+    border-bottom: none;
+}
+
+
+.card {
+    background: white;
+    padding: 35px 25px;
+    border-radius: 15px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    text-align: center;
+    transition: all 0.3s ease;
+    border-top: 4px solid #667eea;
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.card:hover::before {
+    left: 100%;
+}
+
+.card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.2);
+    border-top-color: #764ba2;
+}
+
+.card h3 {
+    margin: 0 0 12px 0;
+    color: #333;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.card p {
+    color: #666;
+    margin: 10px 0 20px 0;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.card-number {
+    font-size: 36px;
+    font-weight: bold;
+    color: #667eea;
+    margin: 15px 0;
+}
+
+.card a {
+    display: inline-block;
+    /* margin-top: 15px;
+    padding: 12px 28px; */
+    background: linear-gradient(135deg, #667eea 0%, #5568d3 100%);
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.card a:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #445ab8 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.card a:active {
+    transform: translateY(-1px);
+}
+.actiuni {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 15px;
+}
+.card-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-bottom:20px;
+}
